@@ -19,6 +19,10 @@
 *.tfvars
 *.tfvars.json
 
+# Node/React ignores
+node_modules/
+dist/
+
 # OS ignores
 .DS_Store
 Thumbs.db
