@@ -23,11 +23,30 @@ public class ProductEndpoints : ICarterModule
             return Results.Ok(products);
         });
 
+        // GET: Obtener un producto por ID
+        group.MapGet("/{id}", async (string id, IMongoClient mongoClient, IConfiguration config) =>
+        {
+            var db = mongoClient.GetDatabase(config["MongoDbSettings:DatabaseName"]);
+            var collection = db.GetCollection<Product>(config["MongoDbSettings:CollectionName"]);
+
+            var product = await collection.Find(p => p.Id == id).FirstOrDefaultAsync();
+            if (product == null)
+            {
+                return Results.NotFound();
+            }
+            return Results.Ok(product);
+        });
+
         // POST: Crear un nuevo producto con atributos dinámicos
         group.MapPost("", async (Product product, IMongoClient mongoClient, IConfiguration config) =>
         {
             var db = mongoClient.GetDatabase(config["MongoDbSettings:DatabaseName"]);
             var collection = db.GetCollection<Product>(config["MongoDbSettings:CollectionName"]);
+
+            if (string.IsNullOrEmpty(product.Id))
+            {
+                product.Id = Guid.NewGuid().ToString();
+            }
 
             await collection.InsertOneAsync(product);
             return Results.Created($"/api/catalog/{product.Id}", product);

@@ -6,7 +6,6 @@ namespace Catalog.Api.Entities;
 public class Product
 {
     [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)] // Permite representar el ObjectId de MongoDB como string en C#
     public string Id { get; set; } = string.Empty;
 
     [BsonElement("name")]
