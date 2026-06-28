@@ -6,6 +6,13 @@ resource "azurerm_resource_group" "rg" {
   location = var.location
 }
 
+# Crear la Identidad Administrada para las Container Apps
+resource "azurerm_user_assigned_identity" "ca_identity" {
+  name                = "id-orderflow-${var.environment}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
 # -------------------------------------------------------------
 # 2. Azure Key Vault (Almacén de Secretos)
 # -------------------------------------------------------------
@@ -26,9 +33,21 @@ resource "azurerm_key_vault" "kv" {
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = data.azurerm_client_config.current.object_id
-
+    
     secret_permissions = [
       "Get", "List", "Set", "Delete", "Purge", "Recover"
+    ]
+  }
+
+  # -------------------------------------------------------------
+  # 2.1. Otorgar permisos de Key Vault a la Identidad
+  # -------------------------------------------------------------
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = azurerm_user_assigned_identity.ca_identity.principal_id
+
+    secret_permissions = [
+      "Get", "List"
     ]
   }
 }
@@ -150,6 +169,11 @@ resource "azurerm_container_app" "catalog_api" {
     password_secret_name = "acr-password"
   }
 
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.ca_identity.id]
+  }
+
   template {
     container {
       name   = "catalog-api"
@@ -200,6 +224,11 @@ resource "azurerm_container_app" "orders_api" {
     value = azurerm_container_registry.acr.admin_password
   }
 
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.ca_identity.id]
+  }
+
   registry {
     server               = azurerm_container_registry.acr.login_server
     username             = azurerm_container_registry.acr.admin_username
@@ -216,11 +245,6 @@ resource "azurerm_container_app" "orders_api" {
       env {
         name  = "ASPNETCORE_ENVIRONMENT"
         value = "Development"
-      }
-      env {
-        name  = "ConnectionStrings__DefaultConnection"
-        # Conexión dinámica a SQL Azure
-        value = "Server=tcp:${azurerm_mssql_server.sql_server.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.sql_db.name};Persist Security Info=False;User ID=${azurerm_mssql_server.sql_server.administrator_login};Password=${azurerm_mssql_server.sql_server.administrator_login_password};MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
       }
       env {
         name  = "ExternalServices__CatalogUrl"
@@ -245,6 +269,14 @@ resource "azurerm_container_app" "orders_api" {
       env {
         name  = "AzureServiceBus__QueueName"
         value = azurerm_servicebus_queue.sb_queue.name
+      }
+      env {
+        name  = "AzureKeyVault__Uri"
+        value = azurerm_key_vault.kv.vault_uri
+      }
+      env {
+        name  = "AZURE_CLIENT_ID"
+        value = azurerm_user_assigned_identity.ca_identity.client_id
       }
     }
   }
@@ -271,6 +303,11 @@ resource "azurerm_container_app" "notifications_worker" {
   secret {
     name  = "acr-password"
     value = azurerm_container_registry.acr.admin_password
+  }
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.ca_identity.id]
   }
 
   registry {
@@ -301,3 +338,20 @@ resource "azurerm_container_app" "notifications_worker" {
     }
   }
 }
+
+  # -------------------------------------------------------------
+  # 12. Secretos de Key Vault para las Container Apps
+  # -------------------------------------------------------------
+  resource "azurerm_key_vault_secret" "db_password" {
+    name         = "ConnectionStrings--DbPassword"
+    value        = var.db_admin_password
+    key_vault_id = azurerm_key_vault.kv.id
+  }
+
+  # Secreto para ConnectionStrings:DefaultConnection
+  resource "azurerm_key_vault_secret" "db_connection" {
+    name         = "ConnectionStrings--DefaultConnection"
+    value        = "Server=tcp:${azurerm_mssql_server.sql_server.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.sql_db.name};Persist Security Info=False;User ID=${azurerm_mssql_server.sql_server.administrator_login};Password=${azurerm_mssql_server.sql_server.administrator_login_password};MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+    key_vault_id = azurerm_key_vault.kv.id
+  }
+

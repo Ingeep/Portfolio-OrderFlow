@@ -13,6 +13,20 @@ using Microsoft.Identity.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+// Cargar secretos desde Azure Key Vault solo en producción
+if (!builder.Environment.IsDevelopment())
+{
+    var keyVaultUri = builder.Configuration["AzureKeyVault:Uri"];
+    if (!string.IsNullOrEmpty(keyVaultUri) && keyVaultUri != "https://your-keyvault.vault.azure.net/")
+    {
+        builder.Configuration.AddAzureKeyVault(
+            new Uri(keyVaultUri),
+            new DefaultAzureCredential());
+    }
+}
+  
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -63,19 +77,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             errorNumbersToAdd: null)
     );
 });
-
-
-// Línea 64 (Antes de builder.Build() y delegaciones):
-if (!builder.Environment.IsDevelopment()) 
-{
-    var keyVaultUri = builder.Configuration["AzureKeyVault:Uri"];
-    if (!string.IsNullOrEmpty(keyVaultUri)) 
-    {
-        builder.Configuration.AddAzureKeyVault(
-            new Uri(keyVaultUri),
-            new DefaultAzureCredential());
-    }   
-}
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);

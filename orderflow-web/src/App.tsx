@@ -36,7 +36,7 @@ interface Product {
 interface OrderItem {
   productId: string;
   productName: string;
-  price: number;
+  unitPrice: number;
   quantity: number;
 }
 
@@ -845,10 +845,10 @@ function App() {
                   {selectedOrder.items && selectedOrder.items.map((item, idx) => (
                     <tr key={idx}>
                       <td style={{ fontWeight: 500 }}>{item.productName || 'Producto Catalogado'}</td>
-                      <td>${item.price.toFixed(2)}</td>
+                      <td>${item.unitPrice.toFixed(2)}</td>
                       <td>{item.quantity}</td>
                       <td style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>
-                        ${(item.price * item.quantity).toFixed(2)}
+                        ${(item.unitPrice * item.quantity).toFixed(2)}
                       </td>
                     </tr>
                   ))}
