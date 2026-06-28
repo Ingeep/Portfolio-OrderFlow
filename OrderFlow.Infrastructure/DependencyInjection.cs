@@ -19,7 +19,8 @@ public static class DependencyInjection
         services.AddHttpClient<ICatalogService, CatalogService>(client =>
         {
             client.BaseAddress = new Uri(configuration["ExternalServices:CatalogUrl"] ?? "http://localhost:5299");
-        });
+        })
+        .AddStandardResilienceHandler();
 
         services.AddScoped<IEventBus, AzureEventBus>();
 
