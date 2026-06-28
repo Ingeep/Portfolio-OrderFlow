@@ -55,11 +55,12 @@ resource "azurerm_mssql_database" "sql_db" {
 # 4. Azure Cosmos DB con API de MongoDB (Para Catalog.Api)
 # -------------------------------------------------------------
 resource "azurerm_cosmosdb_account" "cosmos" {
-  name                = "cosmos-${var.project_name}-${var.environment}"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  offer_type          = "Standard"
-  kind                = "MongoDB"
+  name                 = "cosmos-${var.project_name}-${var.environment}"
+  location             = azurerm_resource_group.rg.location
+  resource_group_name  = azurerm_resource_group.rg.name
+  offer_type           = "Standard"
+  kind                 = "MongoDB"
+  mongo_server_version = "4.2" # Especificar versión moderna compatible con .NET 9
 
   capabilities {
     name = "EnableMongo"
