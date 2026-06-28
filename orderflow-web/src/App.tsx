@@ -83,6 +83,7 @@ function App() {
     { key: 'Garantía', value: '1 año' }
   ]);
   const [isSavingProduct, setIsSavingProduct] = useState<boolean>(false);
+  const [validationErrors, setValidationErrors] = useState<{ name?: string; price?: string }>({});
 
   // Cart & Order Flow State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -221,6 +222,18 @@ function App() {
       attributes: attributesObj
     };
 
+    const errors: { name?: string; price?: string } = {};
+    if (!newProdName.trim()) errors.name = 'El nombre es obligatorio.';
+    if (newProdPrice <= 0) errors.price = 'El precio debe ser mayor a 0.';
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      showToast('Por favor, corrige los errores del formulario.', 'error');
+      return;
+    }
+
+    // Si no hay errores, limpiamos el estado de validación
+    setValidationErrors({});
+    
     try {
       const response = await fetch(`${CATALOG_API_URL}/api/catalog`, {
         method: 'POST',
@@ -304,8 +317,20 @@ function App() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Error al procesar pedido');
+        // 1. Intentar leer la respuesta como JSON
+        try {
+             const errorData = await response.json();
+          // 2. Si es formato RFC 7807, extrae los errores del diccionario
+          if (errorData.errors) {
+            const messages = Object.values(errorData.errors).flat().join(' ');
+            throw new Error(messages);
+          }
+          throw new Error(errorData.title || 'Error al procesar pedido');
+        } catch (jsonErr: any) {
+          // Si no es un JSON (por ejemplo, caída de red), cae en texto plano
+          const rawText = await response.text();
+          throw new Error(rawText || 'Error de conexión con el servidor');
+        }
       }
 
       showToast('¡Pedido creado! Evento publicado en Azure Service Bus.', 'success');
@@ -706,6 +731,12 @@ function App() {
             </div>
 
             <form onSubmit={handleSaveProduct}>
+              {/* Mostrar errores de validación del formulario de productos */}
+              {Object.values(validationErrors).map((err, i) => (
+                <div key={i} style={{ color: '#ef4444', marginBottom: '0.75rem', fontSize: '0.85rem', padding: '0.5rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  {err}
+                </div>
+              ))}
               <div className="form-group">
                 <label className="form-label">Nombre del Producto</label>
                 <input 
