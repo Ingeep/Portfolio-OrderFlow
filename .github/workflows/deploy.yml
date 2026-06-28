@@ -78,20 +78,20 @@ jobs:
     - name: Deploy Catalog API to Container App
       uses: azure/container-apps-deploy-action@v2
       with:
-        imageToDeploy: acrorderflowgbdev.azurecr.io/catalog-api:latest
+        imageToDeploy: acrorderflowgbdev.azurecr.io/catalog-api:${{ github.sha }}
         containerAppName: catalog-api
         resourceGroup: rg-orderflowgb-dev
 
     - name: Deploy Orders API to Container App
       uses: azure/container-apps-deploy-action@v2
       with:
-        imageToDeploy: acrorderflowgbdev.azurecr.io/orders-api:latest
+        imageToDeploy: acrorderflowgbdev.azurecr.io/orders-api:${{ github.sha }}
         containerAppName: orders-api
         resourceGroup: rg-orderflowgb-dev
 
     - name: Deploy Worker to Container App
       uses: azure/container-apps-deploy-action@v2
       with:
-        imageToDeploy: acrorderflowgbdev.azurecr.io/notifications-worker:latest
+        imageToDeploy: acrorderflowgbdev.azurecr.io/notifications-worker:${{ github.sha }}
         containerAppName: notifications-worker
         resourceGroup: rg-orderflowgb-dev
