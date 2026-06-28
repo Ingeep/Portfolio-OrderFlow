@@ -51,6 +51,14 @@ resource "azurerm_mssql_database" "sql_db" {
   sku_name  = "Basic" # La más económica para fines de aprendizaje
 }
 
+# Regla de firewall para permitir que los servicios de Azure (como Container Apps) se conecten al SQL Server
+resource "azurerm_mssql_firewall_rule" "allow_azure_services" {
+  name             = "AllowAzureServices"
+  server_id        = azurerm_mssql_server.sql_server.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
+
 # -------------------------------------------------------------
 # 4. Azure Cosmos DB con API de MongoDB (Para Catalog.Api)
 # -------------------------------------------------------------
