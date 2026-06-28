@@ -11,6 +11,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCarter();
 builder.Services.AddApplicationInsightsTelemetry();
+builder.Services.AddSingleton<Microsoft.ApplicationInsights.Extensibility.ITelemetryInitializer, CatalogTelemetryInitializer>();
+
 
 builder.Services.AddCors(options =>
 {
@@ -45,3 +47,12 @@ app.UseHttpsRedirection();
 
 app.MapCarter();
 app.Run();
+
+public class CatalogTelemetryInitializer : Microsoft.ApplicationInsights.Extensibility.ITelemetryInitializer
+{
+    public void Initialize(Microsoft.ApplicationInsights.Channel.ITelemetry telemetry)
+    {
+        telemetry.Context.Cloud.RoleName = "Catalog API";
+    }
+}
+

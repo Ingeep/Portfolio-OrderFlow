@@ -27,6 +27,7 @@ if (!builder.Environment.IsDevelopment())
 }
   
 builder.Services.AddApplicationInsightsTelemetry();
+builder.Services.AddSingleton<Microsoft.ApplicationInsights.Extensibility.ITelemetryInitializer, OrdersTelemetryInitializer>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers()
@@ -180,4 +181,12 @@ app.Run();
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
+
+public class OrderFlowTelemetryInitializer : Microsoft.ApplicationInsights.Extensibility.ITelemetryInitializer
+{
+    public void Initialize(Microsoft.ApplicationInsights.Channel.ITelemetry telemetry)
+    {
+        telemetry.Context.Cloud.RoleName = "OrderFlow API";
+    }
 }
