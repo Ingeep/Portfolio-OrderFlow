@@ -10,6 +10,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCarter();
+builder.Services.AddApplicationInsightsTelemetry();
 
 builder.Services.AddCors(options =>
 {

@@ -184,6 +184,10 @@ resource "azurerm_container_app" "catalog_api" {
       env {
         name  = "ASPNETCORE_ENVIRONMENT"
         value = "Development"
+      } 
+      env {
+        name  = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+        value = azurerm_application_insights.appins.connection_string
       }
       env {
         name  = "MongoDbSettings__ConnectionString"
@@ -245,6 +249,10 @@ resource "azurerm_container_app" "orders_api" {
       env {
         name  = "ASPNETCORE_ENVIRONMENT"
         value = "Development"
+      }
+      env {
+        name  = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+        value = azurerm_application_insights.appins.connection_string
       }
       env {
         name  = "ExternalServices__CatalogUrl"
@@ -354,4 +362,15 @@ resource "azurerm_container_app" "notifications_worker" {
     value        = "Server=tcp:${azurerm_mssql_server.sql_server.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.sql_db.name};Persist Security Info=False;User ID=${azurerm_mssql_server.sql_server.administrator_login};Password=${azurerm_mssql_server.sql_server.administrator_login_password};MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
     key_vault_id = azurerm_key_vault.kv.id
   }
+
+# -------------------------------------------------------------
+# 13. Azure Application Insights (Telemetría)
+# -------------------------------------------------------------
+resource "azurerm_application_insights" "appins" {
+  name                = "appins-${var.project_name}-${var.environment}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  workspace_id        = azurerm_log_analytics_workspace.law.id
+  application_type    = "web"
+}
 
