@@ -27,7 +27,7 @@ if (!builder.Environment.IsDevelopment())
 }
   
 builder.Services.AddApplicationInsightsTelemetry();
-builder.Services.AddSingleton<Microsoft.ApplicationInsights.Extensibility.ITelemetryInitializer, OrdersTelemetryInitializer>();
+builder.Services.AddSingleton<Microsoft.ApplicationInsights.Extensibility.ITelemetryInitializer, OrderFlowTelemetryInitializer>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddControllers()
