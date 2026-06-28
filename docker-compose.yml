@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # 1. BASE DE DATOS SQL SERVER (Para Orders.Api)
+  # -------------------------------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: orderflow-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourSecurePassword123!
+    ports:
+      - "1433:1433"
+    networks:
+      - orderflow-network
+
+  # -------------------------------------------------------------
+  # 2. BASE DE DATOS MONGODB (Para Catalog.Api)
+  # -------------------------------------------------------------
+  mongodb:
+    image: mongo:latest
+    container_name: orderflow-mongodb
+    ports:
+      - "27017:27017"
+    networks:
+      - orderflow-network
+
+  # -------------------------------------------------------------
+  # 3. MICROSERVICIO DE CATÁLOGO (NoSQL - AOT)
+  # -------------------------------------------------------------
+  catalog-api:
+    image: orderflow-catalog-api
+    container_name: catalog-api
+    build:
+      context: .
+      dockerfile: Catalog.Api/Dockerfile
+    ports:
+      - "5299:8080" # Expone el puerto 5299 hacia afuera, mapeando al 8080 interno
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MongoDbSettings__ConnectionString=mongodb://mongodb:27017 # Apunta al contenedor 'mongodb'
+      - MongoDbSettings__DatabaseName=CatalogDb
+      - MongoDbSettings__CollectionName=Products
+    depends_on:
+      - mongodb
+    networks:
+      - orderflow-network
+
+  # -------------------------------------------------------------
+  # 4. MICROSERVICIO DE PEDIDOS (SQL Server - Clean Architecture)
+  # -------------------------------------------------------------
+  orders-api:
+    image: orderflow-orders-api
+    container_name: orders-api
+    build:
+      context: .
+      dockerfile: OrderFlow.API/Dockerfile
+    ports:
+      - "5000:8080" # Expone el puerto 5000 hacia afuera
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Apunta al contenedor 'sqlserver' y usa la clave segura definida arriba
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=OrderFlowDb;User Id=sa;Password=YourSecurePassword123!;TrustServerCertificate=True
+      # Apunta al contenedor 'catalog-api' por su nombre de red interna en el puerto 8080
+      - ExternalServices__CatalogUrl=http://catalog-api:8080
+      - JwtSettings__SecretKey=a-secret-key-that-is-at-least-32-characters-long-for-development
+      - JwtSettings__Issuer=orderflowapi
+      - JwtSettings__Audience=orderflowapi
+    depends_on:
+      - sqlserver
+      - catalog-api
+    networks:
+      - orderflow-network
+
+  # -------------------------------------------------------------
+  # 5. WORKER DE NOTIFICACIONES (Service Bus Background Service)
+  # -------------------------------------------------------------
+  notifications-worker:
+    image: orderflow-notifications-worker
+    container_name: notifications-worker
+    build:
+      context: .
+      dockerfile: Notifications.Worker/Dockerfile
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      # Por ahora corre simulado (sin connection string de Azure Service Bus)
+      - AzureServiceBus__ConnectionString=
+      - AzureServiceBus__QueueName=orders-queue
+    depends_on:
+      - orders-api
+    networks:
+      - orderflow-network
+
+# Red virtual aislada para comunicar los servicios entre sí
+networks:
+  orderflow-network:
+    driver: bridge

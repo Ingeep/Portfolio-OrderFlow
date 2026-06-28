@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Catalog.Api/Catalog.Api.csproj" />
+  <Project Path="Notifications.Worker/Notifications.Worker.csproj" />
+  <Project Path="OrderFlow.API/OrderFlow.API.csproj" />
+  <Project Path="OrderFlow.Application/OrderFlow.Application.csproj" />
+  <Project Path="OrderFlow.Domain/OrderFlow.Domain.csproj" />
+  <Project Path="OrderFlow.Infrastructure/OrderFlow.Infrastructure.csproj" />
+</Solution>

@@ -1,0 +1,97 @@
+name: Build and Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [ "main" ] # Se ejecuta automáticamente al hacer push a main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Test
+      run: dotnet test --no-build --verbosity normal --configuration Release
+
+  build-and-push-docker:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    # 1. Iniciar sesión en Azure usando las credenciales guardadas en GitHub Secrets
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # 2. Iniciar sesión en el registro de contenedores (ACR)
+    - name: Log in to Azure Container Registry (ACR)
+      run: az acr login --name acrorderflowgbdev
+
+    # 3. Compilar y subir la API de Pedidos (Orders.Api)
+    - name: Build and Push Orders API
+      run: |
+        docker build -t acrorderflowgbdev.azurecr.io/orders-api:${{ github.sha }} -t acrorderflowgbdev.azurecr.io/orders-api:latest -f OrderFlow.API/Dockerfile .
+        docker push acrorderflowgbdev.azurecr.io/orders-api:${{ github.sha }}
+        docker push acrorderflowgbdev.azurecr.io/orders-api:latest
+
+    # 4. Compilar y subir la API de Catálogo (Catalog.Api)
+    - name: Build and Push Catalog API
+      run: |
+        docker build -t acrorderflowgbdev.azurecr.io/catalog-api:${{ github.sha }} -t acrorderflowgbdev.azurecr.io/catalog-api:latest -f Catalog.Api/Dockerfile .
+        docker push acrorderflowgbdev.azurecr.io/catalog-api:${{ github.sha }}
+        docker push acrorderflowgbdev.azurecr.io/catalog-api:latest
+
+    # 5. Compilar y subir el Worker
+    - name: Build and Push Notifications Worker
+      run: |
+        docker build -t acrorderflowgbdev.azurecr.io/notifications-worker:${{ github.sha }} -t acrorderflowgbdev.azurecr.io/notifications-worker:latest -f Notifications.Worker/Dockerfile .
+        docker push acrorderflowgbdev.azurecr.io/notifications-worker:${{ github.sha }}
+        docker push acrorderflowgbdev.azurecr.io/notifications-worker:latest
+
+  deploy-to-azure:
+    needs: build-and-push-docker
+    runs-on: ubuntu-latest
+    steps:
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # Actualizar la revisión en Azure Container Apps con la imagen real recién subida
+    - name: Deploy Catalog API to Container App
+      uses: azure/container-apps-deploy-action@v2
+      with:
+        imageToDeploy: acrorderflowgbdev.azurecr.io/catalog-api:latest
+        containerAppName: catalog-api
+        resourceGroup: rg-orderflowgb-dev
+
+    - name: Deploy Orders API to Container App
+      uses: azure/container-apps-deploy-action@v2
+      with:
+        imageToDeploy: acrorderflowgbdev.azurecr.io/orders-api:latest
+        containerAppName: orders-api
+        resourceGroup: rg-orderflowgb-dev
+
+    - name: Deploy Worker to Container App
+      uses: azure/container-apps-deploy-action@v2
+      with:
+        imageToDeploy: acrorderflowgbdev.azurecr.io/notifications-worker:latest
+        containerAppName: notifications-worker
+        resourceGroup: rg-orderflowgb-dev
