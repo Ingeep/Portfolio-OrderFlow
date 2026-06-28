@@ -77,28 +77,37 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddCarter();
 
-// var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-// var key = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"]!);
+var azureAdConfigured = builder.Configuration["AzureAd:ClientId"] != "YOUR_CLIENT_ID" && 
+                        !string.IsNullOrEmpty(builder.Configuration["AzureAd:ClientId"]);
 
-// builder.Services.AddAuthentication(options => {
-//     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-//     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-// }).AddJwtBearer(options => {
-//     options.RequireHttpsMetadata = false;
-//     options.SaveToken = true;
-//     options.TokenValidationParameters = new TokenValidationParameters{
-//         ValidateIssuerSigningKey = true,
-//         IssuerSigningKey = new SymmetricSecurityKey(key),
-//         ValidateIssuer = true,
-//         ValidIssuer = jwtSettings["Issuer"],
-//         ValidateAudience = true,
-//         ValidAudience = jwtSettings["Audience"],
-//         ValidateLifetime = true,
-//         ClockSkew = TimeSpan.Zero
-//     };
-// });
+if (azureAdConfigured)
+{
+    builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "AzureAd");
+}
+else
+{
+    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+    var key = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"]!);
 
-builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration, "AzureAd");
+    builder.Services.AddAuthentication(options => {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    }).AddJwtBearer(options => {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters{
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidateAudience = true,
+            ValidAudience = jwtSettings["Audience"],
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+}
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddCors(options =>
