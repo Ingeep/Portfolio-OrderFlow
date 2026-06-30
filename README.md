@@ -149,10 +149,16 @@ El directorio `infra` contiene la configuración de Terraform para desplegar tod
    terraform init
    ```
 
-4. Genera un plan de ejecución y aplícalo (se te solicitará la contraseña para el SQL Server):
+4. Crea un archivo llamado `terraform.tfvars` dentro del directorio `infra` para guardar tus variables y contraseñas de forma segura (este archivo está excluido en el `.gitignore` para evitar filtraciones de credenciales):
+
+   ```hcl
+   db_admin_password = "<YOUR_SQL_PASSWORD>"
+   ```
+
+5. Genera un plan de ejecución y aplica los cambios:
 
    ```bash
-   terraform apply -var="db_admin_password=<YOUR_SQL_PASSWORD>"
+   terraform apply
    ```
 
 ---
