@@ -43,11 +43,6 @@ public class ProductEndpoints : ICarterModule
             var db = mongoClient.GetDatabase(config["MongoDbSettings:DatabaseName"]);
             var collection = db.GetCollection<Product>(config["MongoDbSettings:CollectionName"]);
 
-            if (string.IsNullOrEmpty(product.Id))
-            {
-                product.Id = Guid.NewGuid().ToString();
-            }
-
             await collection.InsertOneAsync(product);
             return Results.Created($"/api/catalog/{product.Id}", product);
         });

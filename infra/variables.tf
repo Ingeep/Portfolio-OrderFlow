@@ -18,7 +18,6 @@ variable "location" {
 
 variable "db_admin_password" {
   type        = string
-  default     = "SecurePassword2026!"
   description = "Contraseña de administrador de SQL Server."
   sensitive   = true
 }
